@@ -85,8 +85,8 @@ namespace GisProject.Controllers
             {
                 using var connection = new NpgsqlConnection(_connectionString);
                 connection.Open();
-                string jsonFilePath1 = "C:\\Users\\Mahir\\Desktop\\data2\\bina1.geojson";
-                string jsonFilePath2 = "C:\\Users\\Mahir\\Desktop\\data2\\bina2.geojson";
+                string jsonFilePath1 = "C:\\Users\\Mahir\\Desktop\\data\\bina1.geojson";
+                string jsonFilePath2 = "C:\\Users\\Mahir\\Desktop\\data\\bina2.geojson";
 
                 string json1 = System.IO.File.ReadAllText(jsonFilePath1);
                 string json2 = System.IO.File.ReadAllText(jsonFilePath2);
@@ -102,23 +102,29 @@ namespace GisProject.Controllers
                 foreach (var feature1 in features1)
                 {
                     var geometry1 = feature1["geometry"].ToString();
-
                     uniqueGeometries.Add(geometry1);
                 }
 
                 foreach (var feature2 in features2)
                 {
                     var geometry2 = feature2["geometry"].ToString();
-
                     uniqueGeometries.Add(geometry2);
                 }
 
                 foreach (var geometry in uniqueGeometries)
                 {
-                    var commandText = "INSERT INTO building2 (geometry) VALUES (@geometry)";
-                    using var command = new NpgsqlCommand(commandText, connection);
-                    command.Parameters.AddWithValue("geometry", geometry);
-                    command.ExecuteNonQuery();
+                    var existingRecordQuery = "SELECT COUNT(*) FROM building3 WHERE geometry::text = @geometry";
+                    using var existingRecordCommand = new NpgsqlCommand(existingRecordQuery, connection);
+                    existingRecordCommand.Parameters.AddWithValue("geometry", geometry);
+                    long existingRecordCount = (long)existingRecordCommand.ExecuteScalar();
+
+                    if (existingRecordCount == 0)
+                    {
+                        var commandText = "INSERT INTO building3 (geometry) VALUES (@geometry::geometry)";
+                        using var command = new NpgsqlCommand(commandText, connection);
+                        command.Parameters.AddWithValue("geometry", geometry);
+                        command.ExecuteNonQuery();
+                    }
                 }
 
                 return Ok();
